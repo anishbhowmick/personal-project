@@ -12,6 +12,11 @@ import {
 type RequestBody = { username?: string; password?: string };
 
 const readBody = async (request: IncomingMessage): Promise<RequestBody> => {
+  const preParsedBody = (request as IncomingMessage & { body?: unknown }).body;
+  if (preParsedBody && typeof preParsedBody === "object") {
+    return preParsedBody as RequestBody;
+  }
+
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
@@ -44,8 +49,10 @@ export default async function handler(request: IncomingMessage, response: Server
   }
 
   const body = await readBody(request);
-  const okUsername = constantTimeEqual(body.username ?? "", username);
-  const okPassword = constantTimeEqual(body.password ?? "", password);
+  const inputUsername = (body.username ?? "").trim();
+  const inputPassword = body.password ?? "";
+  const okUsername = constantTimeEqual(inputUsername, username);
+  const okPassword = constantTimeEqual(inputPassword, password);
 
   if (!okUsername || !okPassword) {
     response.statusCode = 401;

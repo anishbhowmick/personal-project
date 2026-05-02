@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { LogOut, Search } from "lucide-react";
+import { Eye, EyeOff, LogOut, Search } from "lucide-react";
 import { useItemsStore } from "./store/itemsStore";
 import { useSecurityStore } from "./store/securityStore";
 import { useAutoLock } from "./hooks/useAutoLock";
@@ -30,6 +30,7 @@ function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { items, loading, search, setItems, setLoading, setSearch, cacheItems, loadCachedItems } = useItemsStore();
   const { locked, quickHide, lock, unlock, toggleQuickHide } = useSecurityStore();
 
@@ -207,10 +208,18 @@ function App() {
             <input
               className="w-full rounded-lg bg-black/30 p-3"
               placeholder="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showPassword ? "Hide Password" : "Show Password"}
+            </button>
             <button className="w-full rounded-lg bg-violet-500 p-3 font-medium">Open Dashboard</button>
             {authError ? <p className="text-sm text-rose-300">{authError}</p> : null}
           </div>

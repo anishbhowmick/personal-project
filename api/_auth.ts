@@ -9,11 +9,20 @@ type RequestLike = {
 const SESSION_COOKIE = "__Host-dashboard_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
-const base64UrlEncode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
-const base64UrlDecode = (value: string) => Buffer.from(value, "base64url").toString("utf8");
+const toBase64Url = (value: string) =>
+  value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+
+const fromBase64Url = (value: string) => {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  return `${base64}${padding}`;
+};
+
+const base64UrlEncode = (value: string) => toBase64Url(Buffer.from(value, "utf8").toString("base64"));
+const base64UrlDecode = (value: string) => Buffer.from(fromBase64Url(value), "base64").toString("utf8");
 
 const sign = (payload: string, secret: string) =>
-  createHmac("sha256", secret).update(payload).digest("base64url");
+  toBase64Url(createHmac("sha256", secret).update(payload).digest("base64"));
 
 export const getSessionSecret = () => process.env.SESSION_SECRET ?? "";
 export const getAccessUsername = () => process.env.ACCESS_USERNAME ?? "";
