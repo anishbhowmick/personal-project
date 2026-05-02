@@ -1,11 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-type RequestLike = {
-  headers: {
-    cookie?: string;
-  };
-};
-
 const SESSION_COOKIE = "__Host-dashboard_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
@@ -58,8 +52,8 @@ export const verifySessionToken = (token: string, secret: string) => {
   }
 };
 
-export const parseSessionCookie = (request: RequestLike) => {
-  const raw = request.headers.cookie ?? "";
+export const parseSessionCookie = (cookieHeader: string | null) => {
+  const raw = cookieHeader ?? "";
   const match = raw
     .split(";")
     .map((part) => part.trim())

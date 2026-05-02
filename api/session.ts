@@ -1,25 +1,16 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { getSessionSecret, parseSessionCookie, verifySessionToken } from "./_auth";
 
-export default function handler(request: IncomingMessage, response: ServerResponse) {
+export default function handler(request: Request) {
   try {
     if (request.method !== "GET") {
-      response.statusCode = 405;
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ error: "Method not allowed" }));
-      return;
+      return Response.json({ error: "Method not allowed" }, { status: 405 });
     }
 
     const secret = getSessionSecret();
-    const token = parseSessionCookie(request);
+    const token = parseSessionCookie(request.headers.get("cookie"));
     const authorized = Boolean(secret) && Boolean(token) && verifySessionToken(token, secret);
-
-    response.statusCode = 200;
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ authorized }));
+    return Response.json({ authorized }, { status: 200 });
   } catch {
-    response.statusCode = 500;
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ authorized: false }));
+    return Response.json({ authorized: false }, { status: 500 });
   }
 }

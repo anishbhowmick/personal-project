@@ -1,22 +1,19 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { clearSessionCookieHeader } from "./_auth";
 
-export default function handler(request: IncomingMessage, response: ServerResponse) {
+export default function handler(request: Request) {
   try {
     if (request.method !== "POST") {
-      response.statusCode = 405;
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ error: "Method not allowed" }));
-      return;
+      return Response.json({ error: "Method not allowed" }, { status: 405 });
     }
 
-    response.statusCode = 200;
-    response.setHeader("Set-Cookie", clearSessionCookieHeader);
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ authorized: false }));
+    return new Response(JSON.stringify({ authorized: false }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": clearSessionCookieHeader,
+      },
+    });
   } catch {
-    response.statusCode = 500;
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ authorized: false }));
+    return Response.json({ authorized: false }, { status: 500 });
   }
 }

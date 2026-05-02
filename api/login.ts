@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   constantTimeEqual,
   createSessionToken,
@@ -10,37 +9,18 @@ import {
 
 type RequestBody = { username?: string; password?: string };
 
-const readBody = async (request: IncomingMessage): Promise<RequestBody> => {
-  const preParsedBody = (request as IncomingMessage & { body?: unknown }).body;
-  if (preParsedBody && typeof preParsedBody === "object") {
-    return preParsedBody as RequestBody;
+const readBody = async (request: Request): Promise<RequestBody> => {
+  try {
+    return (await request.json()) as RequestBody;
+  } catch {
+    return {};
   }
-
-  return await new Promise<RequestBody>((resolve) => {
-    const chunks: Buffer[] = [];
-    request.on("data", (chunk) => chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk));
-    request.on("end", () => {
-      if (!chunks.length) {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")) as RequestBody);
-      } catch {
-        resolve({});
-      }
-    });
-    request.on("error", () => resolve({}));
-  });
 };
 
-export default async function handler(request: IncomingMessage, response: ServerResponse) {
+export default async function handler(request: Request) {
   try {
     if (request.method !== "POST") {
-      response.statusCode = 405;
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ error: "Method not allowed" }));
-      return;
+      return Response.json({ error: "Method not allowed" }, { status: 405 });
     }
 
     const username = getAccessUsername();
@@ -48,10 +28,7 @@ export default async function handler(request: IncomingMessage, response: Server
     const secret = getSessionSecret();
 
     if (!username || !password || !secret) {
-      response.statusCode = 500;
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ error: "Access credentials are not configured" }));
-      return;
+      return Response.json({ error: "Access credentials are not configured" }, { status: 500 });
     }
 
     const body = await readBody(request);
@@ -61,21 +38,18 @@ export default async function handler(request: IncomingMessage, response: Server
     const okPassword = constantTimeEqual(inputPassword, password);
 
     if (!okUsername || !okPassword) {
-      response.statusCode = 401;
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ authorized: false }));
-      return;
+      return Response.json({ authorized: false }, { status: 401 });
     }
 
     const token = createSessionToken(secret);
-
-    response.statusCode = 200;
-    response.setHeader("Set-Cookie", sessionCookieHeader(token));
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ authorized: true }));
+    return new Response(JSON.stringify({ authorized: true }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": sessionCookieHeader(token),
+      },
+    });
   } catch {
-    response.statusCode = 500;
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify({ error: "Login handler failed" }));
+    return Response.json({ error: "Login handler failed" }, { status: 500 });
   }
 }
